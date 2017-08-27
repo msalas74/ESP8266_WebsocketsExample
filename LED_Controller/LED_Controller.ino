@@ -15,36 +15,37 @@ WebSocketsClient webSocket;
 const int POTPIN = A0;
 int analogInputValue = 0;
 
-void sendToServerLevel(int level) {
+void sendToServerNoiseLevel(int level) {
   //Request to server to activate the led
   if (client.connect("192.168.4.1", httpPort)) {
     Serial.println("connected to web server");
     if (level == 3){
       webSocket.sendTXT("#3Alarm");
-      client.print(String("GET ") +"/Red"+" HTTP/1.1\r\n" + 
-               "Host: " + host + "\r\n" +
-               "Connection: close\r\n\r\n");
+      //client.print(String("GET ") +"/Red"+" HTTP/1.1\r\n" + 
+      //         "Host: " + host + "\r\n" +
+      //         "Connection: close\r\n\r\n");
     } else if(level == 2){
-      webSocket.sendTXT("#2Alarm");
-      client.print(String("GET ") +"/Yellow"+" HTTP/1.1\r\n" + 
-               "Host: " + host + "\r\n" +
-               "Connection: close\r\n\r\n");
+      webSocket.sendTXT("#2Alarm"); 
+      //client.print(String("GET ") +"/Yellow"+" HTTP/1.1\r\n" + 
+      //         "Host: " + host + "\r\n" +
+      //         "Connection: close\r\n\r\n");
     } else if (level == 1){
-      client.print(String("GET ") +"/Green"+" HTTP/1.1\r\n" + 
-               "Host: " + host + "\r\n" +
-               "Connection: close\r\n\r\n");
+      webSocket.sendTXT("#1Normal");
+      //client.print(String("GET ") +"/Green"+" HTTP/1.1\r\n" + 
+      //         "Host: " + host + "\r\n" +
+      //         "Connection: close\r\n\r\n");
     }
-             
-    delay(10);
+            
+    delay(30);
     Serial.println("Got response from server.");
     while(client.available()){
       String line = client.readStringUntil('\r');
       Serial.print(line);
     }
-    delay(10);
+    delay(30);
     
-    Serial.println();
-    Serial.println("closing connection");
+    //Serial.println();
+    //Serial.println("closing connection");
   } else {
     delay(100);
     Serial.print(".");
@@ -98,8 +99,8 @@ void startWebSocket(){
   // use HTTP Basic Authorization this is optional remove if not needed
   //webSocket.setAuthorization("user", "Password");
 
-  // try ever 5000 again if connection has failed
-  webSocket.setReconnectInterval(5000);
+  // try reconnection every 5 secs again if connection has failed
+  webSocket.setReconnectInterval(2000);
 }
 
 
@@ -136,7 +137,7 @@ void turnONLEDatThisLevel (int level){
     digitalWrite(D1, LOW);
     digitalWrite(D2, LOW);
     if (!isNormal) {
-      sendToServerLevel(1);
+      sendToServerNoiseLevel(1);
     }
     isNormal = true;
     
@@ -147,7 +148,7 @@ void turnONLEDatThisLevel (int level){
     digitalWrite(D1, HIGH);
     digitalWrite(D2, LOW);
     isNormal = false;
-    sendToServerLevel(2);
+    sendToServerNoiseLevel(2);
   }
     
   if( level > 600){
@@ -155,7 +156,7 @@ void turnONLEDatThisLevel (int level){
     digitalWrite(D1, LOW);
     digitalWrite(D2, HIGH);
     isNormal = false;
-    sendToServerLevel(3);
+    sendToServerNoiseLevel(3);
   }
 }
 
