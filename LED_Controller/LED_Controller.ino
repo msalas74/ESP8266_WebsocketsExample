@@ -4,9 +4,9 @@
 #include <ESP8266WiFi.h>
 #include <WiFiClient.h> 
 
-const char* host = "192.168.4.1"; //Ip of the Host(Our Case esp8266-01 as server. Its the ip of the esp8266-01 as Access point)
+const char* host = "192.168.4.1";
 const int httpPort = 80;
-const char* password = "123";   //
+const char* password = "123";
 bool isNormal = true;
 WiFiClient client;
 WebSocketsClient webSocket;
@@ -43,9 +43,6 @@ void sendToServerNoiseLevel(int level) {
       Serial.print(line);
     }
     delay(30);
-    
-    //Serial.println();
-    //Serial.println("closing connection");
   } else {
     delay(100);
     Serial.print(".");
@@ -105,7 +102,7 @@ void startWebSocket(){
 
 
 void setup() {
-  // put your setup code here, to run once:
+
   pinMode(POTPIN,INPUT);
   pinMode(D0, OUTPUT);
   pinMode(D1, OUTPUT);
@@ -113,18 +110,18 @@ void setup() {
   Serial.begin(115200);
 
 //  setup network connection to server
-  WiFi.mode(WIFI_STA);           //NodeMcu esp12E in station mode
-  WiFi.begin("ESP_D54736", password);      //Connect to this SSID. In our case esp-01 SSID.  
+  WiFi.mode(WIFI_STA);
+  WiFi.begin("ESP_8266WSs", password); 
 
-  while (WiFi.status() != WL_CONNECTED) {      //Wait for getting IP assigned by Access Point/ DHCP. 
-                                               //Our case  esp-01 as Access point will assign IP to nodemcu esp12E.
+  while (WiFi.status() != WL_CONNECTED) {
+                                               
     delay(100);
     Serial.print(".");
   }
   Serial.println("");
   Serial.println("WiFi connected");  
   Serial.println("IP address: ");
-  Serial.println(WiFi.localIP());             //Check out the Ip assigned by the esp12E
+  Serial.println(WiFi.localIP());
 
   connectToServer();
 

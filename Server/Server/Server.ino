@@ -3,43 +3,17 @@
 
 #include <ESP8266WiFi.h>
 #include <ESP8266WebServer.h>
-#include <FS.h>               // SPIFF library to access the ESP flash
+#include <FS.h>                     // SPIFF library to access the ESP flash
 
 
-const char* ssid = "ESP_D54736";  // SSID of esp8266
-const char* password = "123";   //
-bool toggle=0;                  //Variable to switch on and off the solenoid
-ESP8266WebServer server(80);    //Specify port for TCP connection
+const char* ssid = "ESP_8266WSs";
+const char* password = "123";
+
+ESP8266WebServer server(80);    //Specify port for HTTP connection
 WebSocketsServer webSocket = WebSocketsServer(81);
-int zone = 0;
 
-String getContentType(String filename); // convert the file extension to the MIME type
-bool handleFileRead(String path);       // send the right file to the client (if it exists)
-
-void handleRed() {
-  String s = "\r\n\r\n<!DOCTYPE HTML>\r\n<html><h1>Alarm Level</h1> ";
-  s += "<p>Red Level!!!</p></html>\r\n\r\n";
-  server.send(200,"text/html",s);      //Reply to the client
-  Serial.println("replied to client: RED Level");
-}
-
-void handleYellow() {
-  String s = "\r\n\r\n<!DOCTYPE HTML>\r\n<html><h1>Alarm Level</h1> ";
-  s += "<p>Yellow Level!!!</p></html>\r\n\r\n";
-  server.send(200,"text/html",s);      //Reply to the client
-  Serial.println("replied to client: YELLOW Level");
-}
-
-void handleGreen() {
-  String s = "\r\n\r\n<!DOCTYPE HTML>\r\n<html><h1>Alarm Level</h1> ";
-  s += "<p>Green Level</p></html>\r\n\r\n";
-  server.send(200,"text/html",s);      //Reply to the client
-  Serial.println("replied to client: GREEN Level");
-}
-
-void handleDock () {
-  
-}
+String getContentType(String filename);
+bool handleFileRead(String path);
 
 void webSocketEvent(uint8_t num, WStype_t type, uint8_t * response, size_t length) {
 
@@ -80,13 +54,8 @@ void webSocketEvent(uint8_t num, WStype_t type, uint8_t * response, size_t lengt
 
 }
 
-void startWebSocket() { // Start a WebSocket server
-  webSocket.begin();                          // start the websocket server
-  webSocket.onEvent(webSocketEvent);          // if there's an incomming websocket message, go to function 'webSocketEvent'
-  Serial.println("WebSocket server started.");
-}
 
-String getContentType(String filename) { // convert the file extension to the MIME type
+String getContentType(String filename) {
   if (filename.endsWith(".html")) return "text/html";
   else if (filename.endsWith(".css")) return "text/css";
   else if (filename.endsWith(".js")) return "application/javascript";
@@ -94,52 +63,91 @@ String getContentType(String filename) { // convert the file extension to the MI
   return "text/plain";
 }
 
-bool handleFileRead(String path) { // send the right file to the client (if it exists)
+bool handleFileRead(String path) {
   Serial.println("handleFileRead: " + path);
-  if (path.endsWith("/")) path += "index.html";         // If a folder is requested, send the index file
-  String contentType = getContentType(path);            // Get the MIME type
-  if (SPIFFS.exists(path)) {                            // If the file exists
-    File file = SPIFFS.open(path, "r");                 // Open it
-    size_t sent = server.streamFile(file, contentType); // And send it to the client
-    file.close();                                       // Then close the file again
+  if (path.endsWith("/")) path += "index.html";
+  String contentType = getContentType(path);
+  if (SPIFFS.exists(path)) {
+    File file = SPIFFS.open(path, "r");
+    size_t sent = server.streamFile(file, contentType);
+    file.close();
     return true;
   }
   Serial.println("\tFile Not Found");
-  return false;                                         // If the file doesn't exist, return false
+  return false;
 }
 
-void setup() {
-  delay(200);                           //Stable Wifi
-  Serial.begin(115200);                 //Set Baud Rate
-  pinMode(2, OUTPUT);                   //Led/Solenoid at pin 2
-  WiFi.softAP(ssid, password);          //In Access Point Mode
+//  Example for GET HTTP requests for client
+void handleRed() {
+  String s = "\r\n\r\n<!DOCTYPE HTML>\r\n<html><h1>Alarm Level</h1> ";
+  s += "<p>Red Level!!!</p></html>\r\n\r\n";
+  server.send(200,"text/html",s);      //Reply to the client
+  Serial.println("replied to client: RED Level");
+}
 
-  IPAddress myIP = WiFi.softAPIP();     //Check the IP assigned. Put this Ip in the client host.
+void handleYellow() {
+  String s = "\r\n\r\n<!DOCTYPE HTML>\r\n<html><h1>Alarm Level</h1> ";
+  s += "<p>Yellow Level!!!</p></html>\r\n\r\n";
+  server.send(200,"text/html",s);      //Reply to the client
+  Serial.println("replied to client: YELLOW Level");
+}
+
+void handleGreen() {
+  String s = "\r\n\r\n<!DOCTYPE HTML>\r\n<html><h1>Alarm Level</h1> ";
+  s += "<p>Green Level</p></html>\r\n\r\n";
+  server.send(200,"text/html",s);      //Reply to the client
+  Serial.println("replied to client: GREEN Level");
+}
+
+void startWIFI() {
+  WiFi.softAP(ssid, password);
+  IPAddress myIP = WiFi.softAPIP();
   Serial.print("AP IP address: ");
-  Serial.println(myIP);                 //Print the esp8266-01 IP(Client must also be on the save IP series)
-  //  Alarm levels
+  Serial.println(myIP);
+}
+
+void setUpSPIFFS() {
+  SPIFFS.begin();
+  Serial.println("SPIFFS server started.");
+}
+
+void startWebSocket() {
+  webSocket.begin();
+  webSocket.onEvent(webSocketEvent);
+  Serial.println("WebSocket server started.");
+}
+
+void startWebServer(){
+   //  Alarm levels
   server.on("/Red", handleRed);
   server.on("/Yellow", handleYellow);
   server.on("/Green", handleGreen);
-             
-  server.on("/Dock", handleDock);         //  Send info to Dock Panel at Client Browser
-
-  SPIFFS.begin();                           // Start the SPI Flash Files System
   
-  server.onNotFound([]() {                              // If the client requests any URI
-    if (!handleFileRead(server.uri()))                  // send it if it exists
-      server.send(404, "text/plain", "404: Not Found"); // otherwise, respond with a 404 (Not Found) error
+  server.onNotFound([]() {
+    if (!handleFileRead(server.uri()))
+      server.send(404, "text/plain", "404: Not Found");
   });
   
-  server.begin();                       // Start the server
-  Serial.println("Server started");
+  server.begin();
+  Serial.println("HTTP Server started");
+}
+
+void setup() {
+  delay(200);
+  Serial.begin(115200);
+  pinMode(2, OUTPUT);
+
+  startWIFI();
+
+  setUpSPIFFS();
 
   startWebSocket();
+
+  startWebServer();
 }
 
 void loop() {
   webSocket.loop();
-  // Check if a client has connected. On first connection switch on the Solenoid on next switch off.
   server.handleClient();
 
 }
